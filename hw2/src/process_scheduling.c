@@ -12,16 +12,17 @@
 #define UNUSED(x) (void)(x)
 
 //these are logical reference based on what ScheduleResult_t *result most likely is
-/**/
-//Looking online and consulting online sources most seem to have this job object
 //defined for qsort comparisons functions so i have included it here
+//Also is defined minus process_id in Section 5. Details Under: Binary Configuration File Format
+//And Above Terminology and concepts
 typedef struct {
-	int job_id;      // The id of the job
-	int burst_time;  // The burst time of the job
-	int arrival_time;// The Time that it takes to arrive at this job
-} job_t;
+	int process_id;  // The id of the process
+	int burst_time;  // The burst time of the process
+	int arrival_time;// The Time that the process arrived to be run.
+	int priority;    // The process's priority value
+} process_t;
 
-/**/
+//This is the Project 2: Defined exit result
 typedef struct {
     size_t total_clock_time;      // Total time taken to execute all processes
     int average_waiting_time;     // int storing the average waiting time of each job
@@ -40,10 +41,14 @@ void virtual_cpu(ProcessControlBlock_t *process_control_block)
 bool first_come_first_serve(dyn_array_t *ready_queue, ScheduleResult_t *result) 
 {
 	//Hopefully this works the way I want it to
+	//NOTE: needs to be qsorted by arrival time to complete the FCFS
 	//UNUSED(ready_queue);
 	//UNUSED(result);
 	//return false;
 
+	if(dyn_array_size(ready_queue) == 0 || !result || !ready_queue){
+		return false; //Error handling
+	}
 	//this region only functions in visual studio code
 	#pragma region Going through the array and compiling the result
 	//This sets up for calculating the schedule_t result result
@@ -52,7 +57,7 @@ bool first_come_first_serve(dyn_array_t *ready_queue, ScheduleResult_t *result)
 	int current_time = 0;
 	for(size_t x = 0; x < num_jobs; x++){
 		//Hopefully this works
-		job_t *job = (job_t *)(dyn_array_front(ready_queue)) + x;
+		process_t *job = (process_t *)(dyn_array_front(ready_queue)) + x;
 
 		if(current_time < job->arrival_time){
 			// CPU idle time handling
@@ -82,14 +87,16 @@ bool first_come_first_serve(dyn_array_t *ready_queue, ScheduleResult_t *result)
 bool shortest_job_first(dyn_array_t *ready_queue, ScheduleResult_t *result) 
 {
 	//Hopefully this works the way I want it to
-	//UNUSED(ready_queue);
-	//UNUSED(result);
-	//return false;
+	/*
+	UNUSED(ready_queue);
+	UNUSED(result);
+	return false;
+	*/
+	
 	//Error checking
 	if(dyn_array_size(ready_queue) == 0 || !result || !ready_queue){
 		return false; //Error handling
 	}
-
 
 	//Hopefully the method below will sort the dyn_array_t ready_queue
 	//by shortest job first
@@ -105,7 +112,7 @@ bool shortest_job_first(dyn_array_t *ready_queue, ScheduleResult_t *result)
 	int current_time = 0;
 	for(size_t x = 0; x < num_jobs; x++){
 		//Hopefully this works
-		job_t *job = (job_t *)(dyn_array_front(ready_queue)) + x;
+		process_t *job = (process_t *)(dyn_array_front(ready_queue)) + x;
 
 		if(current_time < job->arrival_time){
 			// CPU idle time handling
@@ -134,15 +141,14 @@ bool shortest_job_first(dyn_array_t *ready_queue, ScheduleResult_t *result)
 
 //This should allow us to be able to properly sort the ready_queue dyn_array_t
 int compare_sjf(const void *a, const void *b){
-	const job_t *job1 = (const job_t *)a;
-	const job_t *job2 = (const job_t *)b;
+	const process_t *job1 = (const process_t *)a;
+	const process_t *job2 = (const process_t *)b;
 	// Sort by shortest burst time first
 	return job1->burst_time - job2->burst_time; 
 }
 
 bool priority(dyn_array_t *ready_queue, ScheduleResult_t *result) 
 {
-	//NOT being done this project
 	UNUSED(ready_queue);
 	UNUSED(result);
 	return false;
@@ -159,13 +165,44 @@ bool round_robin(dyn_array_t *ready_queue, ScheduleResult_t *result, size_t quan
 
 dyn_array_t *load_process_control_blocks(const char *input_file) 
 {
-	//INCOMPLETE
+	//DOUBLE CHECK FOR COMPLETION
+	//UNUSED(input_file);
+	//return NULL;
+
+	if(!input_file){ //error handling for when their is nothing inserted
+		return NULL;
+	}
+
+	FILE *file = fopen(input_file, "rb");
+	if(!file){ //error handling for when file doesn't exist
+		return NULL;
+	}
+
+	int n; //there will be 1+(3N) 32-bit integers
+	fread(n, sizeof(int), 1, file); // The First number is always N
+	size_t cap = (n/3);
 	//create the dyn_array
-	// dyn_array_t ready_queue = dyn_array_create();
-	UNUSED(input_file);
-	return NULL;
-	//eventually return the newly created dyn_array
-	// return ready_queue;
+	dyn_array_t *ready_queue = dyn_array_create(cap, sizeof(process_t), 0);
+	if(!ready_queue){
+		return NULL; //error handling incase dyn_array_create() has failed
+	}
+
+	process_t process;
+	//We now cycle through the file and insert information
+	for(int x = 0; x < n; x++){
+		process.process_id = x;
+		fread(process.burst_time, sizeof(int), 1, file);   //grab values and put them into a process_t struct
+		fread(process.priority, sizeof(int), 1, file);     //grab values and put them into a process_t struct
+		fread(process.arrival_time, sizeof(int), 1, file); //grab values and put them into a process_t struct
+		
+		bool success = dyn_array_push_back(ready_queue, &process); //Queues are FIFO so we always push to the back of the void *array that dyn_array_t is apart of
+		if(success == false){
+			return NULL; //error handling incase dyn_array_push_back has failed
+		}
+	}
+
+	fclose(file); //close file
+	return ready_queue; //eventually return the newly created dyn_array
 }
 
 bool shortest_remaining_time_first(dyn_array_t *ready_queue, ScheduleResult_t *result) 
