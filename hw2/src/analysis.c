@@ -20,6 +20,15 @@ int main(int argc, char **argv)
 	}
 
 	abort();		// REPLACE ME with implementation.
+	//set up the dyn_array_t from pcb file
+	dyn_array_t *ready_queue; 
+	//load the process queue
+	ready_queue = load_process_control_blocks(argv[0]); 
+	//Process/run the schedule algorithm
+	
+	//Something to do with quantum
 
+	//free the established dyn_array_t *ready_queue
+	free(ready_queue);
 	return EXIT_SUCCESS;
 }

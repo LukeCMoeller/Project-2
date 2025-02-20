@@ -317,6 +317,63 @@ class GradeEnvironment : public testing::Environment
 };
 */
 
+//these tests are for process_scheduling.c for the FCFS implementation
+/*
+TEST(first_come_first_serve, Success){
+	int test_nums[] = {2, 3, 6, 8, 9, 11};
+    size_t count = 6;
+    size_t int_size = sizeof(int);
+    dyn_array_t *test_array = dyn_array_import(test_nums, count, int_size, NULL);
+	ASSERT_NE(test_array, nullptr);
+
+	ScheduleResult_t result; //set up result object that will be passed back
+	result->total_clock_time = (size_t)0; //set up default values
+	result->average_waiting_time = 0;     //set up default values
+	result->average_turnaround_time = 0;  //set up default values
+	bool check = first_come_first_serve(test_array, result); //Run the test result
+	EXPECT_EQ(check, true); //if passes will be true
+	ASSERT_NE(result->average_waiting_time, 0);     //confirm ScheduleResult_t result changed accordingly
+	ASSERT_NE(result->average_turnaround_time, 0);  //confirm ScheduleResult_t result changed accordingly
+	ASSERT_NE(result->total_clock_time, (size_t)0); //confirm ScheduleResult_t result changed accordingly
+	dyn_array_destroy(test_array);
+}
+
+TEST(first_come_first_serve, Fails){
+	int test_nums[] = {2, 3, 6, 8, 9, 11};
+    size_t count = 6;
+    size_t int_size = sizeof(int);
+    dyn_array_t *test_array = dyn_array_import(test_nums, count, int_size, NULL);
+	test_array->size = 0;
+	ASSERT_NE(test_array, nullptr);
+
+	ScheduleResult_t result; //set up result object that will be passed back
+	result->total_clock_time = (size_t)0; //set up default values
+	result->average_waiting_time = 0;     //set up default values
+	result->average_turnaround_time = 0;  //set up default values
+	bool check = first_come_first_serve(test_array, result); //Run the test result
+	EXPECT_EQ(check, false); //if passes will be true
+	dyn_array_destroy(test_array);
+}
+
+*/
+
+//These Tests are for process_scheduling.c for the load_process_control_blocks (PCB)
+//They are not complete since load_process_control_blocks() isn't implemented
+/*
+TEST(load_process_control_blocks, Success){
+	const char test_input_file = "";//change this to a proper test input file
+	dyn_array_t loaded_list = load_process_control_block(test_input_file);
+	ASSERT_NE(loaded_list, NULL);
+}
+
+TEST(load_process_control_blocks, Fail){
+	const char test_input_file = NULL; //change this to a proper test input file
+	dyn_array_t loaded_list = load_process_control_block(test_input_file);
+	EXPECT_EQ(loaded_list, NULL);
+}
+*/
+
+
 
 int main(int argc, char **argv)
 {
