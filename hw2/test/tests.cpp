@@ -318,26 +318,38 @@ class GradeEnvironment : public testing::Environment
 */
 
 //these tests are for process_scheduling.c for the FCFS implementation
-/*
+//
 TEST(first_come_first_serve, Success){
-	int test_nums[] = {2, 3, 6, 8, 9, 11};
-    size_t count = 6;
-    size_t int_size = sizeof(int);
-    dyn_array_t *test_array = dyn_array_import(test_nums, count, int_size, NULL);
+	ProcessControlBlock_t test_nums[] = {	// Use process_t instead of normal int array
+        	{6, 1, 0, false},
+        	{8, 1, 2, false}
+   	};
+    	size_t count = sizeof(test_nums) / sizeof(ProcessControlBlock_t);
+    	size_t struct_size = sizeof(ProcessControlBlock_t);
+    	
+	dyn_array_t *test_array = dyn_array_create(count, struct_size, NULL);
 	ASSERT_NE(test_array, nullptr);
 
-	ScheduleResult_t result; //set up result object that will be passed back
-	result->total_clock_time = (size_t)0; //set up default values
-	result->average_waiting_time = 0;     //set up default values
-	result->average_turnaround_time = 0;  //set up default values
-	bool check = first_come_first_serve(test_array, result); //Run the test result
+	for (size_t i = 0; i < count; i++) {	//Push test data into dynamic array
+        	dyn_array_push_back(test_array, &test_nums[i]);
+    	}
+	
+	ScheduleResult_t result = {0, 0, 0}; //set up result object that will be passed back
+	
+	result.total_run_time = 0; //set up default values
+	result.average_waiting_time = 0;     //set up default values
+	result.average_turnaround_time = 0;  //set up default values
+	
+	bool check = first_come_first_serve(test_array, &result); //Run the test result
 	EXPECT_EQ(check, true); //if passes will be true
-	ASSERT_NE(result->average_waiting_time, 0);     //confirm ScheduleResult_t result changed accordingly
-	ASSERT_NE(result->average_turnaround_time, 0);  //confirm ScheduleResult_t result changed accordingly
-	ASSERT_NE(result->total_clock_time, (size_t)0); //confirm ScheduleResult_t result changed accordingly
+	
+	EXPECT_GT(result.average_waiting_time, 0);     //confirm ScheduleResult_t result changed accordingly
+	EXPECT_GT(result.average_turnaround_time, 0);  //confirm ScheduleResult_t result changed accordingly
+	EXPECT_GT(result.total_run_time, (size_t)0); //confirm ScheduleResult_t result changed accordingly
+	
 	dyn_array_destroy(test_array);
 }
-
+/*
 TEST(first_come_first_serve, Fails){
 	int test_nums[] = {2, 3, 6, 8, 9, 11};
     size_t count = 6;
@@ -355,8 +367,8 @@ TEST(first_come_first_serve, Fails){
 	dyn_array_destroy(test_array);
 }
 
-*/
 
+*/
 //These Tests are for process_scheduling.c for the load_process_control_blocks (PCB)
 //They are not complete since load_process_control_blocks() isn't implemented
 /*
