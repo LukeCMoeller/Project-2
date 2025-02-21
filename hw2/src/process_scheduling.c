@@ -195,11 +195,13 @@ dyn_array_t *load_process_control_blocks(const char *input_file)
 
 	FILE *file = fopen(input_file, "rb");
 	if(!file){ //error handling for when file doesn't exist
+		printf("problem with opening file %s\n", input_file);
 		return NULL;
 	}
 
 	int n; //there will be 1+(3N) 32-bit integers
 	if (fread(&n, sizeof(int), 1, file) != 1) {   // Need to pass the address of N, error handling to be sure we read N
+		printf("problem with reading number of processes from file\n");
 		fclose(file);
 		return NULL;
 	}
@@ -208,6 +210,7 @@ dyn_array_t *load_process_control_blocks(const char *input_file)
 	//create the dyn_array
 	dyn_array_t *ready_queue = dyn_array_create(cap, sizeof(ProcessControlBlock_t), NULL);
 	if(!ready_queue){
+		printf("problem with creating dyn_array\n");
 		fclose(file);
 		return NULL; //error handling incase dyn_array_create() has failed
 	}
@@ -223,6 +226,7 @@ dyn_array_t *load_process_control_blocks(const char *input_file)
 			fread(&process.priority, sizeof(uint32_t), 1, file) != 1 ||     //grab values and put them into a process_t struct
 			fread(&process.arrival, sizeof(uint32_t), 1, file) != 1) { //grab values and put them into a process_t struct
 			dyn_array_destroy(ready_queue); //prevent mem leak
+			printf("problem with reading remaining burst time\n");
 			fclose(file);
 			return NULL;
 		}
@@ -230,7 +234,8 @@ dyn_array_t *load_process_control_blocks(const char *input_file)
 		process.started = false; // process hasn't started yet
 		
 		if (!dyn_array_push_back(ready_queue, &process)) { // Push process to queue
-            		dyn_array_destroy(ready_queue);
+			printf("Process %d: priority=%u\n", x, process.priority);
+			dyn_array_destroy(ready_queue);
             		fclose(file);
             		return NULL;
         	}
