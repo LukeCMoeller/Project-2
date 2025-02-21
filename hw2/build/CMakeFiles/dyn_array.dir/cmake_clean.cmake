@@ -1,5 +1,6 @@
 file(REMOVE_RECURSE
   "CMakeFiles/dyn_array.dir/src/dyn_array.c.o"
+  "CMakeFiles/dyn_array.dir/src/dyn_array.c.o.d"
   "libdyn_array.a"
   "libdyn_array.pdb"
 )
