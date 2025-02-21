@@ -349,43 +349,80 @@ TEST(first_come_first_serve, Success){
 	
 	dyn_array_destroy(test_array);
 }
-/*
+
 TEST(first_come_first_serve, Fails){
-	int test_nums[] = {2, 3, 6, 8, 9, 11};
-    size_t count = 6;
-    size_t int_size = sizeof(int);
-    dyn_array_t *test_array = dyn_array_import(test_nums, count, int_size, NULL);
-	test_array->size = 0;
+	//int test_nums[] = {2, 3, 6, 8, 9, 11};
+    	size_t count = 6;
+    	//size_t int_size = sizeof(int);
+    	
+	dyn_array_t *test_array = dyn_array_create(count, sizeof(ProcessControlBlock_t), NULL);
 	ASSERT_NE(test_array, nullptr);
 
+	dyn_array_clear(test_array);	// Clear the array without modifying the size directly
+
 	ScheduleResult_t result; //set up result object that will be passed back
-	result->total_clock_time = (size_t)0; //set up default values
-	result->average_waiting_time = 0;     //set up default values
-	result->average_turnaround_time = 0;  //set up default values
-	bool check = first_come_first_serve(test_array, result); //Run the test result
+	result.total_run_time = 0; //set up default values
+	result.average_waiting_time = 0;     //set up default values
+	result.average_turnaround_time = 0;  //set up default values
+	
+	bool check = first_come_first_serve(test_array, &result); //Run the test result
+	
 	EXPECT_EQ(check, false); //if passes will be true
+	
 	dyn_array_destroy(test_array);
 }
 
-
-*/
 //These Tests are for process_scheduling.c for the load_process_control_blocks (PCB)
-//They are not complete since load_process_control_blocks() isn't implemented
-/*
-TEST(load_process_control_blocks, Success){
-	const char test_input_file = "";//change this to a proper test input file
-	dyn_array_t loaded_list = load_process_control_block(test_input_file);
-	ASSERT_NE(loaded_list, NULL);
+
+TEST(load_process_control_blocks, Success){	
+	const char *test_input_file = "test_pcb.bin";
+
+    	// Create a test binary file with predefined PCB data
+    	FILE *file = fopen(test_input_file, "wb");
+    	ASSERT_NE(file, nullptr);
+
+    	uint32_t test_data[] = {
+        	2,  // Number of processes
+        	5, 1, 0,  // Process 1: burst time, priority, arrival time
+        	3, 2, 2   // Process 2: burst time, priority, arrival time
+    	};
+
+    	// Write test data to the file
+    	size_t elements_written = fwrite(test_data, sizeof(uint32_t), sizeof(test_data) / sizeof(uint32_t), file);
+    	ASSERT_EQ(elements_written, sizeof(test_data) / sizeof(uint32_t));
+    	fclose(file);
+
+    	// Load the process control blocks from the binary file
+    	dyn_array_t *loaded_list = load_process_control_blocks(test_input_file);
+    	ASSERT_NE(loaded_list, nullptr);
+    	EXPECT_EQ(dyn_array_size(loaded_list),(size_t)2);
+
+    	// Validate the first process
+    	ProcessControlBlock_t *pcb1 = (ProcessControlBlock_t *)dyn_array_at(loaded_list, 0);
+    	ASSERT_NE(pcb1, nullptr);
+    	EXPECT_EQ(pcb1->remaining_burst_time,(uint32_t)5);
+    	EXPECT_EQ(pcb1->priority, (uint32_t)1);
+    	EXPECT_EQ(pcb1->arrival, (uint32_t)0);
+
+    	// Validate the second process
+    	ProcessControlBlock_t *pcb2 = (ProcessControlBlock_t *)dyn_array_at(loaded_list, 1);
+    	ASSERT_NE(pcb2, nullptr);
+    	EXPECT_EQ(pcb2->remaining_burst_time,(uint32_t)3);
+    	EXPECT_EQ(pcb2->priority, (uint32_t)2);
+    	EXPECT_EQ(pcb2->arrival, (uint32_t)2);
+
+    	// Cleanup
+    	dyn_array_destroy(loaded_list);
+    	remove(test_input_file);
 }
 
 TEST(load_process_control_blocks, Fail){
-	const char test_input_file = NULL; //change this to a proper test input file
-	dyn_array_t loaded_list = load_process_control_block(test_input_file);
-	EXPECT_EQ(loaded_list, NULL);
+    const char *test_input_file = nullptr;  // Invalid file path (nullptr simulates a missing file)
+    
+    dyn_array_t *loaded_list = load_process_control_blocks(test_input_file);
+    
+    EXPECT_EQ(loaded_list, nullptr);  // Expect failure (should return nullptr)
 }
-*/
-
-
 
 int main(int argc, char **argv)
 {
