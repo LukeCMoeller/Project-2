@@ -8,7 +8,7 @@
 #define P "P"
 #define RR "RR"
 #define SJF "SJF"
-
+#define SRT "srt"
 int main(int argc, char **argv) 
 {
 	    if (argc < 3) 
