@@ -1,6 +1,8 @@
 file(REMOVE_RECURSE
   "CMakeFiles/hw2_test.dir/src/process_scheduling.c.o"
+  "CMakeFiles/hw2_test.dir/src/process_scheduling.c.o.d"
   "CMakeFiles/hw2_test.dir/test/tests.cpp.o"
+  "CMakeFiles/hw2_test.dir/test/tests.cpp.o.d"
   "hw2_test"
   "hw2_test.pdb"
 )
