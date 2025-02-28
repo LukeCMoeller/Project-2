@@ -372,6 +372,38 @@ TEST(first_come_first_serve, Fails){
 	dyn_array_destroy(test_array);
 }
 
+// These tests are for process_scheduling.c for the shortest_remaining_time_first
+TEST(shortest_remaining_time_first, Success){
+	ProcessControlBlock_t test_nums[] = {	// Use process_t instead of normal int array
+        	{6, 1, 0, false},
+        	{8, 1, 2, false}
+   	};
+    	size_t count = sizeof(test_nums) / sizeof(ProcessControlBlock_t);
+    	size_t struct_size = sizeof(ProcessControlBlock_t);
+    	
+	dyn_array_t *test_array = dyn_array_create(count, struct_size, NULL);
+	ASSERT_NE(test_array, nullptr);
+
+	for (size_t i = 0; i < count; i++) {	//Push test data into dynamic array
+        	dyn_array_push_back(test_array, &test_nums[i]);
+    	}
+	
+	ScheduleResult_t result = {0, 0, 0}; //set up result object that will be passed back
+	
+	result.total_run_time = 0; //set up default values
+	result.average_waiting_time = 0;     //set up default values
+	result.average_turnaround_time = 0;  //set up default values
+	
+	bool check = shortest_remaining_time_first(test_array, &result); //Run the test result
+	EXPECT_EQ(check, true); //if passes will be true
+	
+	EXPECT_GT(result.average_waiting_time, 0);     //confirm ScheduleResult_t result changed accordingly
+	EXPECT_GT(result.average_turnaround_time, 0);  //confirm ScheduleResult_t result changed accordingly
+	EXPECT_GT(result.total_run_time, (size_t)0); //confirm ScheduleResult_t result changed accordingly
+	
+	dyn_array_destroy(test_array);
+}
+
 //These Tests are for process_scheduling.c for the load_process_control_blocks (PCB)
 
 TEST(load_process_control_blocks, Success){	
