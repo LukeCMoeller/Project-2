@@ -2,6 +2,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <limits.h>
 
 #include "dyn_array.h"
 #include "processing_scheduling.h"
@@ -38,6 +43,21 @@ void virtual_cpu(ProcessControlBlock_t *process_control_block)
 {
 	// decrement the burst time of the pcb
 	--process_control_block->remaining_burst_time;
+}
+
+int compare_remaining_time(const void *a, const void *b){
+	const ProcessControlBlock_t *job1 = (const ProcessControlBlock_t *)a;
+    const ProcessControlBlock_t *job2 = (const ProcessControlBlock_t *)b;
+
+	if(job1->arrival < job2->arrival){
+		return ((job1->remaining_burst_time - (job2->arrival - job1->arrival)) - job2->remaining_burst_time);
+	}
+	else if (job1->arrival > job2->arrival){
+		return (job1->remaining_burst_time - (job2->remaining_burst_time - (job1->arrival - job2->arrival)));
+	}
+	else{
+		return job1->remaining_burst_time - job2->remaining_burst_time;
+	}
 }
 
 bool first_come_first_serve(dyn_array_t *ready_queue, ScheduleResult_t *result)
@@ -120,23 +140,28 @@ bool shortest_job_first(dyn_array_t *ready_queue, ScheduleResult_t *result)
 	size_t num_jobs = dyn_array_size(ready_queue);
 	uint32_t completion_time = 0;
 	uint32_t current_time = 0;
+
+	// Initialize accumulators for turnaround and waiting times
+    	result->average_turnaround_time = 0;
+    	result->average_waiting_time = 0;
+
 	for(size_t x = 0; x < num_jobs; x++){
 		//Hopefully this works
 		ProcessControlBlock_t *job = (ProcessControlBlock_t *)dyn_array_at(ready_queue, x);
 		if (!job) {
-            return false; // error handling
-        }
+            		return false; // error handling
+        	}
 		if(current_time < job->arrival){
 			// CPU idle time handling
 			current_time = job->arrival;
 		}
-
-		//compute the Completion Time of this job
-		completion_time = current_time + job->remaining_burst_time;
-		//compute Turnaround Time
-		result->average_turnaround_time = completion_time - job->arrival;
-		//compute Waiting Time
-		result->average_waiting_time = result->average_turnaround_time - job->remaining_burst_time;
+		
+		// Compute the Completion Time of this job
+              	completion_time = current_time + job->remaining_burst_time;
+              	// Accumulate Turnaround Time (completion - arrival)
+              	result->average_turnaround_time += (completion_time - job->arrival);
+              	// Accumulate Waiting Time (turnaround - burst)
+              	result->average_waiting_time += (completion_time - job->arrival - job->remaining_burst_time);
 
 		// Update current_time to reflect the execution of this job
 		current_time = completion_time;
@@ -221,12 +246,145 @@ bool priority(dyn_array_t *ready_queue, ScheduleResult_t *result)
 
 bool round_robin(dyn_array_t *ready_queue, ScheduleResult_t *result, size_t quantum) 
 {
-	//INCOMPLETE
-	UNUSED(ready_queue);
-	UNUSED(result);
-	UNUSED(quantum);
-	return false;
-	
+	// Error checking: ensure valid pointers, non-empty ready_queue, and a nonzero quantum
+    	if (!ready_queue || !result || dyn_array_size(ready_queue) == 0 || quantum == 0) {
+        	return false;
+    	}
+
+    	size_t num_jobs = dyn_array_size(ready_queue);
+
+    	// Initialize result accumulator
+    	result->average_turnaround_time = 0;
+    	result->average_waiting_time = 0;
+    	result->total_run_time = 0;
+
+    	// Arrays to track job completion and if a job is currently enqueued
+    	bool *completed = calloc(num_jobs, sizeof(bool));
+    	bool *in_queue  = calloc(num_jobs, sizeof(bool));
+    	if (!completed || !in_queue) {
+        	free(completed);
+        	free(in_queue);
+        	return false;
+    	}
+
+    	// Allocate a simple queue for indices (worst-case size = num_jobs)
+    	int *queue = malloc(num_jobs * sizeof(int));
+    	if (!queue) {
+        	free(completed);
+        	free(in_queue);
+        	return false;
+    	}
+    	int front = 0, rear = 0;
+
+    	// Initialize current_time to the earliest arrival
+    	uint32_t current_time = UINT32_MAX;
+    	for (size_t i = 0; i < num_jobs; i++) {
+        	ProcessControlBlock_t *job = (ProcessControlBlock_t *)dyn_array_at(ready_queue, i);
+        	if (job->arrival < current_time) {
+            		current_time = job->arrival;
+        	}
+    	}
+
+    	// Enqueue all processes that have arrived by current_time
+    	for (size_t i = 0; i < num_jobs; i++) {
+        	ProcessControlBlock_t *job = (ProcessControlBlock_t *)dyn_array_at(ready_queue, i);
+        	if (job->arrival <= current_time && !in_queue[i]) {
+            		queue[rear++] = i;
+            		in_queue[i] = true;
+        	}
+    	}
+
+    	size_t completed_count = 0;
+    	// Main scheduling loop
+    	while (completed_count < num_jobs) {
+        	// If the queue is empty, advance current_time to the next process arrival
+        	if (front == rear) {
+            		uint32_t next_arrival = UINT32_MAX;
+            		for (size_t i = 0; i < num_jobs; i++) {
+                		if (!completed[i]) {
+                    			ProcessControlBlock_t *job = (ProcessControlBlock_t *)dyn_array_at(ready_queue, i);
+                    			if (job->arrival < next_arrival) {
+                        			next_arrival = job->arrival;
+                    			}
+                		}
+            		}
+            		current_time = next_arrival;
+            
+	    		// Enqueue any process that has now arrived
+            		for (size_t i = 0; i < num_jobs; i++) {
+                		if (!completed[i] && !in_queue[i]) {
+                    			ProcessControlBlock_t *job = (ProcessControlBlock_t *)dyn_array_at(ready_queue, i);
+                    			if (job->arrival <= current_time) {
+                        			queue[rear++] = i;
+                        			in_queue[i] = true;
+                    			}		
+                		}
+            		}
+        	}
+
+        // Dequeue the next process
+        int idx = queue[front++];
+        in_queue[idx] = false;
+        ProcessControlBlock_t *job = (ProcessControlBlock_t *)dyn_array_at(ready_queue, idx);
+
+        // If current_time is before the job's arrival, advance the clock
+        if (current_time < job->arrival) {
+            current_time = job->arrival;
+        }
+
+        // Execute the job for a time slice (quantum) or for its remaining time
+        uint32_t exec_time = (job->remaining_burst_time > quantum) ? quantum : job->remaining_burst_time;
+        job->remaining_burst_time -= exec_time;
+        current_time += exec_time;
+
+        // Enqueue any jobs that have arrived during this time slice
+        for (size_t i = 0; i < num_jobs; i++) {
+            	if (!completed[i] && !in_queue[i]) {
+                	ProcessControlBlock_t *other = (ProcessControlBlock_t *)dyn_array_at(ready_queue, i);
+                	if (other->arrival <= current_time) {
+                    		queue[rear++] = i;
+                    		in_queue[i] = true;
+                	}
+            	}
+        }
+
+        // Check if the current job is complete.
+       	 if (job->remaining_burst_time == 0) {
+            	completed[idx] = true;
+            	completed_count++;
+
+            	// Turnaround time: current_time - arrival
+            	uint32_t turnaround = current_time - job->arrival;
+            	result->average_turnaround_time += turnaround;
+            	
+		// Waiting time: turnaround time - original burst time
+            	result->average_waiting_time += (turnaround - job->burst_time);
+        	} else {
+            	
+		// If not finished, re-enqueue the job
+            	queue[rear++] = idx;
+            	in_queue[idx] = true;
+        	}
+    	}
+
+    	// Calculate averages
+    	result->average_turnaround_time /= (float)num_jobs;
+    	result->average_waiting_time /= (float)num_jobs;
+    	result->total_run_time = current_time;
+
+    	free(queue);
+    	free(in_queue);
+    	free(completed);
+    	return true;
+}
+
+// Help with sorting by arrival time in load_process_control_blocks 
+int compare_arrival_time(const void *a, const void *b) {
+    const ProcessControlBlock_t *p1 = (const ProcessControlBlock_t *)a;
+    const ProcessControlBlock_t *p2 = (const ProcessControlBlock_t *)b;
+    if (p1->arrival < p2->arrival) return -1;
+    if (p1->arrival > p2->arrival) return 1;
+    return 0;
 }
 
 dyn_array_t *load_process_control_blocks(const char *input_file) 
@@ -276,6 +434,9 @@ dyn_array_t *load_process_control_blocks(const char *input_file)
 			fclose(file);
 			return NULL;
 		}
+		
+		// Set the original burst time to the read burst time
+		process.burst_time = process.remaining_burst_time;
 
 		process.started = false; // process hasn't started yet
 		
@@ -287,6 +448,12 @@ dyn_array_t *load_process_control_blocks(const char *input_file)
         	}
 	}
 
+	qsort((void *)dyn_array_export(ready_queue), 
+      		dyn_array_size(ready_queue), 
+      		sizeof(ProcessControlBlock_t), 
+      		compare_arrival_time);
+
+	
 	fclose(file); //close file
 	return ready_queue; //eventually return the newly created dyn_array
 }
@@ -339,7 +506,9 @@ bool shortest_remaining_time_first(dyn_array_t *ready_queue, ScheduleResult_t *r
 		}
 
 		//WE can sort here, but it more than likly won't have any changes or differences
-		//dyn_array_sort(ready_queue, compare_remaining_time);
+		if (dyn_array_sort(ready_queue, compare_remaining_time) == false) {
+			return false;
+		}
 		x++;
 	}
 
@@ -369,17 +538,4 @@ Arrival = a, remaing burst time = b
 would sort into order
 1 3 4 2 5 
 */
-int compare_remaining_time(const void *a, const void *b){
-	const ProcessControlBlock_t *job1 = (const ProcessControlBlock_t *)a;
-    const ProcessControlBlock_t *job2 = (const ProcessControlBlock_t *)b;
 
-	if(job1->arrival < job2->arrival){
-		return ((job1->remaining_burst_time - (job2->arrival - job1->arrival)) - job2->remaining_burst_time);
-	}
-	else if (job1->arrival > job2->arrival){
-		return (job1->remaining_burst_time - (job2->remaining_burst_time - (job1->arrival - job2->arrival)));
-	}
-	else{
-		return job1->remaining_burst_time - job2->remaining_burst_time;
-	}
-}

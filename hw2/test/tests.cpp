@@ -321,8 +321,8 @@ class GradeEnvironment : public testing::Environment
 //
 TEST(first_come_first_serve, Success){
 	ProcessControlBlock_t test_nums[] = {	// Use process_t instead of normal int array
-        	{6, 1, 0, false},
-        	{8, 1, 2, false}
+        	{6, 6, 1, 0, false},
+        	{8, 8, 1, 2, false}
    	};
     	size_t count = sizeof(test_nums) / sizeof(ProcessControlBlock_t);
     	size_t struct_size = sizeof(ProcessControlBlock_t);
@@ -375,8 +375,8 @@ TEST(first_come_first_serve, Fails){
 // These tests are for process_scheduling.c for the shortest_remaining_time_first
 TEST(shortest_remaining_time_first, Success){
 	ProcessControlBlock_t test_nums[] = {	// Use process_t instead of normal int array
-        	{6, 1, 0, false},
-        	{8, 1, 2, false}
+        	{6, 6, 1, 0, false},
+        	{8, 8, 1, 2, false}
    	};
     	size_t count = sizeof(test_nums) / sizeof(ProcessControlBlock_t);
     	size_t struct_size = sizeof(ProcessControlBlock_t);

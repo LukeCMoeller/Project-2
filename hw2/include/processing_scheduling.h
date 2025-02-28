@@ -13,9 +13,10 @@
 	typedef struct 
 	{
 		uint32_t remaining_burst_time;  // the remaining burst of the pcb
+		uint32_t burst_time;
 		uint32_t priority;				// The priority of the task
 		uint32_t arrival;				// Time the process arrived in the ready queue
-		bool started;			  		// If it has been activated on virtual CPU
+		bool started;		// If it has been activated on virtual CP
 	} 
 	ProcessControlBlock_t;				// you may or may not need to add more elements
 
