@@ -42,85 +42,69 @@ void virtual_cpu(ProcessControlBlock_t *process_control_block)
 
 bool first_come_first_serve(dyn_array_t *ready_queue, ScheduleResult_t *result)
 {
-        //Hopefully this works the way I want it to
-        //NOTE: needs to be qsorted by arrival time to complete the FCFS
-        //UNUSED(ready_queue);
-        //UNUSED(result);
-        //return false;
+    //Hopefully this works the way I want it to
+    //NOTE: needs to be qsorted by arrival time to complete the FCFS
+    //UNUSED(ready_queue);
+    //UNUSED(result);
+    //return false;
 
-        if(dyn_array_size(ready_queue) == 0 || !result || !ready_queue){
-                return false; //Error handling
-        }
+    if(dyn_array_size(ready_queue) == 0 || !result || !ready_queue){
+        return false; //Error handling
+    }
 
 	// Initialize result fields
-    	result->average_turnaround_time = 0;
-    	result->average_waiting_time = 0;
+    result->average_turnaround_time = 0;
+    result->average_waiting_time = 0;
 
-        //this region only functions in visual studio code
-        // #pragma region Going through the array and compiling the result
-        //This sets up for calculating the schedule_t result result
-        size_t num_jobs = dyn_array_size(ready_queue);
-        uint32_t completion_time = 0;
-        uint32_t current_time = 0;
-        for(size_t x = 0; x < num_jobs; x++){
-                //Hopefully this works
-                // process_t *job = (process_t *)dyn_array_at(ready_queue, x);
-                ProcessControlBlock_t *job = (ProcessControlBlock_t *)dyn_array_at(ready_queue, x);
+    //This sets up for calculating the schedule_t result result
+    size_t num_jobs = dyn_array_size(ready_queue);
+    uint32_t completion_time = 0;
+    uint32_t current_time = 0;
+    for(size_t x = 0; x < num_jobs; x++){
+        //Hopefully this works
+        // process_t *job = (process_t *)dyn_array_at(ready_queue, x);
+        ProcessControlBlock_t *job = (ProcessControlBlock_t *)dyn_array_at(ready_queue, x);
 		if (!job) {
-                        return false; // error handling
-                }
-
-                if(current_time < job->arrival){
-                        // CPU idle time handling
-                        current_time = job->arrival;
-                }
-
-                //compute the Completion Time of this job
-                completion_time = current_time + job->remaining_burst_time;
-                //compute Turnaround Time
-                result->average_turnaround_time += completion_time - job->arrival;
-                //compute Waiting Time
-                result->average_waiting_time += (completion_time - job->arrival) - job->remaining_burst_time;
-
-                // Update current_time to reflect the execution of this job
-                current_time = completion_time;
+            return false; // error handling
         }
 
-        //average the totals for both turnaround_time and waiting times
-        if (num_jobs > 0){
+        if(current_time < job->arrival){
+            // CPU idle time handling
+            current_time = job->arrival;
+        }
+
+        //compute the Completion Time of this job
+        completion_time = current_time + job->remaining_burst_time;
+        //compute Turnaround Time
+        result->average_turnaround_time += completion_time - job->arrival;
+        //compute Waiting Time
+        result->average_waiting_time += (completion_time - job->arrival) - job->remaining_burst_time;
+
+        // Update current_time to reflect the execution of this job
+        current_time = completion_time;
+    }
+
+    //average the totals for both turnaround_time and waiting times
+    if (num_jobs > 0){
 		result->average_turnaround_time /= (float)num_jobs;
-        	result->average_waiting_time /= (float)num_jobs;
+        result->average_waiting_time /= (float)num_jobs;
 	}
-        // Store total execution time
-        result->total_run_time = current_time;
-        // #pragma endregion
-        return true;
+    // Store total execution time
+    result->total_run_time = current_time;
+    return true;
 }
 
 //This should allow us to be able to properly sort the ready_queue dyn_array_t
 int compare_sjf(const void *a, const void *b){
-	/*
-	const process_t *job1 = (const process_t *)a;
-	const process_t *job2 = (const process_t *)b;
-	// Sort by shortest burst time first
-	return job1->burst_time - job2->burst_time; 
-	*/
 	const ProcessControlBlock_t *job1 = (const ProcessControlBlock_t *)a;
-    	const ProcessControlBlock_t *job2 = (const ProcessControlBlock_t *)b;
+    const ProcessControlBlock_t *job2 = (const ProcessControlBlock_t *)b;
 
-    	// Sort by shortest remaining burst time first
-    	return job1->remaining_burst_time - job2->remaining_burst_time;
+    // Sort by shortest remaining burst time first
+    return job1->remaining_burst_time - job2->remaining_burst_time;
 }
 
 bool shortest_job_first(dyn_array_t *ready_queue, ScheduleResult_t *result) 
 {
-	//Hopefully this works the way I want it to
-	/*
-	UNUSED(ready_queue);
-	UNUSED(result);
-	return false;
-	*/
-	
 	//Error checking
 	if(dyn_array_size(ready_queue) == 0 || !result || !ready_queue){
 		return false; //Error handling
@@ -132,16 +116,16 @@ bool shortest_job_first(dyn_array_t *ready_queue, ScheduleResult_t *result)
 		return false;
 	}
 
-	//this region only functions in visual studio code
-	//#pragma region Going through the array and compiling the result
 	//This sets up for calculating the schedule_t result result
 	size_t num_jobs = dyn_array_size(ready_queue);
 	uint32_t completion_time = 0;
 	uint32_t current_time = 0;
 	for(size_t x = 0; x < num_jobs; x++){
 		//Hopefully this works
-		//process_t *job = (process_t *)(dyn_array_front(ready_queue)) + x;
 		ProcessControlBlock_t *job = (ProcessControlBlock_t *)dyn_array_at(ready_queue, x);
+		if (!job) {
+            return false; // error handling
+        }
 		if(current_time < job->arrival){
 			// CPU idle time handling
 			current_time = job->arrival;
@@ -159,19 +143,80 @@ bool shortest_job_first(dyn_array_t *ready_queue, ScheduleResult_t *result)
 	}
 
 	//average the totals for both turnaround_time and waiting times
-	result->average_turnaround_time = result->average_turnaround_time / num_jobs;
-	result->average_waiting_time = result->average_waiting_time / num_jobs;
+    if (num_jobs > 0){
+		result->average_turnaround_time /= (float)num_jobs;
+        result->average_waiting_time /= (float)num_jobs;
+	}
 	// Store total execution time
 	result->total_run_time = current_time;
-	//#pragma endregion
 	return true;
+}
+
+//This should allow us to be able to properly sort the ready_queue dyn_array_t by priority
+//this is from and based on compare_sjf (Shortest job first) method.
+//Since lower priority number = higher priority 
+// this will work the same way
+int compare_priority(const void *a, const void *b){
+	const ProcessControlBlock_t *job1 = (const ProcessControlBlock_t *)a;
+    const ProcessControlBlock_t *job2 = (const ProcessControlBlock_t *)b;
+
+    // Sort by shortest priority first
+    return job1->priority - job2->priority;
 }
 
 bool priority(dyn_array_t *ready_queue, ScheduleResult_t *result) 
 {
-	UNUSED(ready_queue);
-	UNUSED(result);
-	return false;
+	/*
+	All that was done here is just take the algorithm for shortest job first and change the sorting parameters by priority
+	instead of by shortest job
+	*/
+	//Error checking
+	if(dyn_array_size(ready_queue) == 0 || !result || !ready_queue){
+		return false; //Error handling
+	}
+
+	//Hopefully the method below will sort the dyn_array_t ready_queue
+	//by smallest numerical priority first.
+	//SINCE PRIORITY is BASED ON LOWER NUMBER = HIGHER PRIORITY
+	//This should work just fine
+	if(dyn_array_sort(ready_queue, compare_priority) == false){
+		return false;
+	}
+
+	//This sets up for calculating the schedule_t result result
+	size_t num_jobs = dyn_array_size(ready_queue);
+	uint32_t completion_time = 0;
+	uint32_t current_time = 0;
+	for(size_t x = 0; x < num_jobs; x++){
+		//Hopefully this works
+		ProcessControlBlock_t *job = (ProcessControlBlock_t *)dyn_array_at(ready_queue, x);
+		if (!job) {
+            return false; // error handling
+        }
+		if(current_time < job->arrival){
+			// CPU idle time handling
+			current_time = job->arrival;
+		}
+
+		//compute the Completion Time of this job
+		completion_time = current_time + job->remaining_burst_time;
+		//compute Turnaround Time
+		result->average_turnaround_time = completion_time - job->arrival;
+		//compute Waiting Time
+		result->average_waiting_time = result->average_turnaround_time - job->remaining_burst_time;
+
+		// Update current_time to reflect the execution of this job
+		current_time = completion_time;
+	}
+
+	//average the totals for both turnaround_time and waiting times
+    if (num_jobs > 0){
+		result->average_turnaround_time /= (float)num_jobs;
+        result->average_waiting_time /= (float)num_jobs;
+	}
+	// Store total execution time
+	result->total_run_time = current_time;
+	return true;
 }
 
 bool round_robin(dyn_array_t *ready_queue, ScheduleResult_t *result, size_t quantum) 
@@ -181,6 +226,7 @@ bool round_robin(dyn_array_t *ready_queue, ScheduleResult_t *result, size_t quan
 	UNUSED(result);
 	UNUSED(quantum);
 	return false;
+	
 }
 
 dyn_array_t *load_process_control_blocks(const char *input_file) 
@@ -247,8 +293,93 @@ dyn_array_t *load_process_control_blocks(const char *input_file)
 
 bool shortest_remaining_time_first(dyn_array_t *ready_queue, ScheduleResult_t *result) 
 {
-	//INCOMPLETE
-	UNUSED(ready_queue);
-	UNUSED(result);
-	return false;
+	/*
+	This one wants to sort all by shortest burst time to start off with and
+	EVERY time it completes a process it wants to resort by shortest burst time
+
+	*/
+	//Error checking
+	if(dyn_array_size(ready_queue) == 0 || !result || !ready_queue){
+		return false; //Error handling
+	}
+
+	//Hopefully the method below will sort the dyn_array_t ready_queue
+	if(dyn_array_sort(ready_queue, compare_remaining_time) == false){
+		return false;
+	}
+
+	//This sets up for calculating the schedule_t result result
+	size_t num_jobs = dyn_array_size(ready_queue);
+	uint32_t completion_time = 0;
+	uint32_t current_time = 0;
+	size_t x = 0;
+	while(x != num_jobs){
+		//Hopefully this works
+		ProcessControlBlock_t *job = (ProcessControlBlock_t *)dyn_array_at(ready_queue, 0);
+		if (!job) {
+            return false; // error handling
+        }
+		if(current_time < job->arrival){
+			// CPU idle time handling
+			current_time = job->arrival;
+		}
+
+		//compute the Completion Time of this job
+		completion_time = current_time + job->remaining_burst_time;
+		//compute Turnaround Time
+		result->average_turnaround_time = completion_time - job->arrival;
+		//compute Waiting Time
+		result->average_waiting_time = result->average_turnaround_time - job->remaining_burst_time;
+
+		// Update current_time to reflect the execution of this job
+		current_time = completion_time;
+		//remove first element of queue
+		if(dyn_array_pop_front(ready_queue) == false){
+			break; //We have no elements in the list and we should leave
+		}
+
+		//WE can sort here, but it more than likly won't have any changes or differences
+		//dyn_array_sort(ready_queue, compare_remaining_time);
+		x++;
+	}
+
+	//average the totals for both turnaround_time and waiting times
+    if (num_jobs > 0){
+		result->average_turnaround_time /= (float)num_jobs;
+        result->average_waiting_time /= (float)num_jobs;
+	}
+	// Store total execution time
+	result->total_run_time = current_time;
+	return true;
+}
+
+/*
+This should in theory sort by smallest remaining time.
+This is done by first comparing arrival time.
+Then based on who got their first, we then compare if it's remaining burst time
+EX.
+Arrival = a, remaing burst time = b
+# | a | b
+1 | 0 | 10
+2 | 15| 7
+3 | 7 | 4
+4 | 5 | 7
+5 | 30| 10
+
+would sort into order
+1 3 4 2 5 
+*/
+int compare_remaining_time(const void *a, const void *b){
+	const ProcessControlBlock_t *job1 = (const ProcessControlBlock_t *)a;
+    const ProcessControlBlock_t *job2 = (const ProcessControlBlock_t *)b;
+
+	if(job1->arrival < job2->arrival){
+		return ((job1->remaining_burst_time - (job2->arrival - job1->arrival)) - job2->remaining_burst_time);
+	}
+	else if (job1->arrival > job2->arrival){
+		return (job1->remaining_burst_time - (job2->remaining_burst_time - (job1->arrival - job2->arrival)));
+	}
+	else{
+		return job1->remaining_burst_time - job2->remaining_burst_time;
+	}
 }
