@@ -12,6 +12,143 @@ extern "C"
 
 #define NUM_PCB 30
 #define QUANTUM 5 // Used for Robin Round for process as the run time limit
+//test the first_come_first_server
+TEST(first_come_first_serve, SucessfullFirstCome){
+	//allocation
+        ProcessControlBlock_t pcb1 = (ProcessControlBlock_t)malloc(sizeof(ProcessControlBlock_t));
+        pcb1->remaining_burst_time = 2;
+        pcb1->arrival = 0;
+        ProcessControlBlock_t pcb2 = (ProcessControlBlock_t)malloc(sizeof(ProcessControlBlock_t));
+        pcb2->remaining_burst_time = 5;
+        pcb2->arrival = 3;
+        ProcessControlBlock_t pcb3 = (ProcessControlBlock_t)malloc(sizeof(ProcessControlBlock_t));
+        pcb3->remaining_burst_time = 7;
+        pcb3->arrival = 5;
+        dyn_array_t run_queue  = dyn_array_create(3, sizeof(ProcessControlBlock_t), NULL);
+        dyn_array_insert(run_queue , 0, pcb1);
+        dyn_array_insert(run_queue , 1, pcb2);
+        dyn_array_insert(run_queue , 2, pcb3);
+        ScheduleResult_t results = (ScheduleResult_t *)malloc(sizeof(ScheduleResult_t));
+        ASSERT_TRUE(first_come_first_serve(run_queue , results));
+        printf("%f", results->average_waiting_time);
+        ASSERT_NEAR(0.666666, results->average_waiting_time, 0.001);
+        ASSERT_NEAR(7.666, results->average_turnaround_time, 0.001);
+        unsigned long number = 14;
+        ASSERT_EQ(number, results->total_run_time);
+        dyn_array_destroy(run_queue);
+	free(pcb1);
+	free(pcb2);
+	free(pcb3);
+    	free(results);
+}
+
+//testing for  compare_sjf
+TEST(compare_sjf,SucessfulCompareSJF) {
+    	ProcessControlBlock_t *job1 = (ProcessControlBlock_t)malloc(sizeof(ProcessControlBlock_t));
+	job1->remaining_burst_time = 10;
+	ProcessControlBlock_t *job2 = (ProcessControlBlock_t)malloc(sizeof(ProcessControlBlock_t));
+	job2->remaining_burst_time = 2;
+	ProcessControlBlock_t *job3 = (ProcessControlBlock_t)malloc(sizeof(ProcessControlBlock_t));
+	job3->remaining_burst_time = 5;
+	ProcessControlBlock_t *jobs[] = { job1, job2, job3 };
+	qsort(jobs, 3, sizeof(ProcessControlBlock_t *), compare_sjf);
+
+	//order should be 2, 3, 1
+    	ASSERT_EQ(jobs[0].remaining_burst_time, 2);
+    	ASSERT_EQ(jobs[1].remaining_burst_time, 5);
+    	ASSERT_EQ(jobs[2].remaining_burst_time, 10);
+}
+//testing for Shortest_job_first
+TEST(shortest_job_first, SuccessfulShortestCome) {
+    	// Allocate and initialize ProcessControlBlock_t structures
+    	ProcessControlBlock_t *pcb1 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
+	pcb1->remaining_burst_time = 10;
+    	pcb1->arrival = 0;
+    	ProcessControlBlock_t *pcb2 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
+    	pcb2->remaining_burst_time = 2;
+    	pcb2->arrival = 3;
+	ProcessControlBlock_t *pcb3 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
+	pcb3->remaining_burst_time = 5;
+    	pcb3->arrival = 5;
+
+    	dyn_array_t *run_queue = dyn_array_create(3, sizeof(ProcessControlBlock_t *), NULL);
+    	dyn_array_insert(run_queue, 0, pcb1);
+    	dyn_array_insert(run_queue, 1, pcb2);
+    	dyn_array_insert(run_queue, 2, pcb3);
+	
+    	ScheduleResult_t *results = (ScheduleResult_t *)malloc(sizeof(ScheduleResult_t));
+    	
+    	ASSERT_TRUE(shortest_job_first(run_queue, results));
+	
+    	ASSERT_NEAR(5.333, results->average_waiting_time, 0.001);
+    	ASSERT_NEAR(9.333, results->average_turnaround_time, 0.001);
+    	ASSERT_EQ(15, results->total_run_time);
+	
+    	dyn_array_destroy(run_queue);
+    	free(pcb1);
+    	free(pcb2);
+    	free(pcb3);
+    	free(results);
+}
+//testing for compare_priority
+TEST(compare_priority, SucessfulComparePriorioty) {
+    	ProcessControlBlock_t *job1 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
+    	job1->priority = 10;
+	ProcessControlBlock_t *job2 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
+    	job2->priority = 2;
+	ProcessControlBlock_t *job3 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
+	job3->priority = 5;
+	
+   	ProcessControlBlock_t *jobs[] = { job1, job2, job3 };
+
+    	qsort(jobs, 3, sizeof(ProcessControlBlock_t *), compare_priority);
+
+    	ASSERT_EQ(jobs[0]->priority, 2);
+    	ASSERT_EQ(jobs[1]->priority, 5);
+    	ASSERT_EQ(jobs[2]->priority, 10);
+
+    	free(job1);
+    	free(job2);
+    	free(job3);
+}
+
+//testing priority
+TEST(priority, SuccessfullPriority){
+    	ProcessControlBlock_t *pcb1 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
+	pcb1->priority = 10;
+    	pcb1->remaining_burst_time = 10;
+    	pcb1->arrival = 0;
+    	ProcessControlBlock_t *pcb2 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
+    	pcb2->priority = 2;
+    	pcb2->remaining_burst_time = 2;
+    	pcb2->arrival = 3;
+	ProcessControlBlock_t *pcb3 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
+    	pcb3->priority = 5;
+    	pcb3->remaining_burst_time = 5;
+    	pcb3->arrival = 5;
+
+
+    	dyn_array_t *run_queue = dyn_array_create(3, sizeof(ProcessControlBlock_t *), NULL);
+    	dyn_array_insert(run_queue, 0, pcb1);
+    	dyn_array_insert(run_queue, 1, pcb2);
+    	dyn_array_insert(run_queue, 2, pcb3);
+
+    	ScheduleResult_t *results = (ScheduleResult_t *)malloc(sizeof(ScheduleResult_t));
+
+    	ASSERT_TRUE(priority(run_queue, results));
+
+    	ASSERT_NEAR(5.333, results->average_waiting_time, 0.001);
+    	ASSERT_NEAR(9.333, results->average_turnaround_time, 0.001);
+    	ASSERT_EQ(15, results->total_run_time);
+
+    	dyn_array_destroy(run_queue);
+    	free(pcb1);
+    	free(pcb2);
+    	free(pcb3);
+    	free(results);
+}
+
+
 //had to add the structure here because for some reason it wouldnt recognize what it was otherwise
 struct dyn_array 
 {
