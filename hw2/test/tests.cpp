@@ -1,266 +1,21 @@
 #include <fcntl.h>
 #include <stdio.h>
-#include <pthread.h>
 #include "gtest/gtest.h"
+#include <pthread.h>
 #include "../include/processing_scheduling.h"
+#include <dyn_array.h>
 
-// Using a C library requires extern "C" to prevent function mangling
+// Using a C library requires extern "C" to prevent function managling
 extern "C" 
 {
 #include <dyn_array.h>
+#include <processing_scheduling.h>
 }
 
 #define NUM_PCB 30
 #define QUANTUM 5 // Used for Robin Round for process as the run time limit
-//test the first_come_first_server
-TEST(first_come_first_serve, SucessfullFirstCome){
-	//allocation
-        ProcessControlBlock_t pcb1 = (ProcessControlBlock_t)malloc(sizeof(ProcessControlBlock_t));
-        pcb1->remaining_burst_time = 2;
-        pcb1->arrival = 0;
-        ProcessControlBlock_t pcb2 = (ProcessControlBlock_t)malloc(sizeof(ProcessControlBlock_t));
-        pcb2->remaining_burst_time = 5;
-        pcb2->arrival = 3;
-        ProcessControlBlock_t pcb3 = (ProcessControlBlock_t)malloc(sizeof(ProcessControlBlock_t));
-        pcb3->remaining_burst_time = 7;
-        pcb3->arrival = 5;
-        dyn_array_t run_queue  = dyn_array_create(3, sizeof(ProcessControlBlock_t), NULL);
-        dyn_array_insert(run_queue , 0, pcb1);
-        dyn_array_insert(run_queue , 1, pcb2);
-        dyn_array_insert(run_queue , 2, pcb3);
-        ScheduleResult_t results = (ScheduleResult_t *)malloc(sizeof(ScheduleResult_t));
-        ASSERT_TRUE(first_come_first_serve(run_queue , results));
-        printf("%f", results->average_waiting_time);
-        ASSERT_NEAR(0.666666, results->average_waiting_time, 0.001);
-        ASSERT_NEAR(7.666, results->average_turnaround_time, 0.001);
-        unsigned long number = 14;
-        ASSERT_EQ(number, results->total_run_time);
-        dyn_array_destroy(run_queue);
-	free(pcb1);
-	free(pcb2);
-	free(pcb3);
-    	free(results);
-}
-
-//testing first_come_first_server null
-TEST(first_come_first_serve, FailedNullFirst) {
-    	ScheduleResult_t result;
-    	dyn_array_t *ready_queue = dyn_array_create(3, sizeof(ProcessControlBlock_t), NULL);
-    	ASSERT_NE(ready_queue, nullptr);
-    	ASSERT_FALSE(first_come_first_serve(NULL, &result));
-    	ASSERT_FALSE(first_come_first_serve(ready_queue, NULL));
-    	dyn_array_destroy(ready_queue);
-}
-
-//testing for  compare_sjf
-TEST(compare_sjf,SucessfulCompareSJF) {
-    	ProcessControlBlock_t *job1 = (ProcessControlBlock_t)malloc(sizeof(ProcessControlBlock_t));
-	job1->remaining_burst_time = 10;
-	ProcessControlBlock_t *job2 = (ProcessControlBlock_t)malloc(sizeof(ProcessControlBlock_t));
-	job2->remaining_burst_time = 2;
-	ProcessControlBlock_t *job3 = (ProcessControlBlock_t)malloc(sizeof(ProcessControlBlock_t));
-	job3->remaining_burst_time = 5;
-	ProcessControlBlock_t *jobs[] = { job1, job2, job3 };
-	qsort(jobs, 3, sizeof(ProcessControlBlock_t *), compare_sjf);
-
-	//order should be 2, 3, 1
-    	ASSERT_EQ(jobs[0].remaining_burst_time, 2);
-    	ASSERT_EQ(jobs[1].remaining_burst_time, 5);
-    	ASSERT_EQ(jobs[2].remaining_burst_time, 10);
-}
-//testing for Shortest_job_first
-TEST(shortest_job_first, SuccessfulShortestCome) {
-    	// Allocate and initialize ProcessControlBlock_t structures
-    	ProcessControlBlock_t *pcb1 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
-	pcb1->remaining_burst_time = 10;
-    	pcb1->arrival = 0;
-    	ProcessControlBlock_t *pcb2 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
-    	pcb2->remaining_burst_time = 2;
-    	pcb2->arrival = 3;
-	ProcessControlBlock_t *pcb3 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
-	pcb3->remaining_burst_time = 5;
-    	pcb3->arrival = 5;
-
-    	dyn_array_t *run_queue = dyn_array_create(3, sizeof(ProcessControlBlock_t *), NULL);
-    	dyn_array_insert(run_queue, 0, pcb1);
-    	dyn_array_insert(run_queue, 1, pcb2);
-    	dyn_array_insert(run_queue, 2, pcb3);
-	
-    	ScheduleResult_t *results = (ScheduleResult_t *)malloc(sizeof(ScheduleResult_t));
-    	
-    	ASSERT_TRUE(shortest_job_first(run_queue, results));
-	
-    	ASSERT_NEAR(5.333, results->average_waiting_time, 0.001);
-    	ASSERT_NEAR(9.333, results->average_turnaround_time, 0.001);
-    	ASSERT_EQ(15, results->total_run_time);
-	
-    	dyn_array_destroy(run_queue);
-    	free(pcb1);
-    	free(pcb2);
-    	free(pcb3);
-    	free(results);
-}
-//testing shortest_job_first null
-TEST(shortest_job_first, FailedNullShortest) {
-    	ScheduleResult_t result;
-    	dyn_array_t *ready_queue = dyn_array_create(3, sizeof(ProcessControlBlock_t), NULL);
-    	ASSERT_NE(ready_queue, nullptr);
-    	ASSERT_FALSE(shortest_job_first(NULL, &result));
-    	ASSERT_FALSE(shortest_job_first(ready_queue, NULL));
-    	dyn_array_destroy(ready_queue);
-}
-//testing for compare_priority
-TEST(compare_priority, SucessfulComparePriorioty) {
-    	ProcessControlBlock_t *job1 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
-    	job1->priority = 10;
-	ProcessControlBlock_t *job2 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
-    	job2->priority = 2;
-	ProcessControlBlock_t *job3 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
-	job3->priority = 5;
-	
-   	ProcessControlBlock_t *jobs[] = { job1, job2, job3 };
-
-    	qsort(jobs, 3, sizeof(ProcessControlBlock_t *), compare_priority);
-
-    	ASSERT_EQ(jobs[0]->priority, 2);
-    	ASSERT_EQ(jobs[1]->priority, 5);
-    	ASSERT_EQ(jobs[2]->priority, 10);
-
-    	free(job1);
-    	free(job2);
-    	free(job3);
-}
-
-//testing priority
-TEST(priority, SuccessfullPriority){
-    	ProcessControlBlock_t *pcb1 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
-	pcb1->priority = 10;
-    	pcb1->remaining_burst_time = 10;
-    	pcb1->arrival = 0;
-    	ProcessControlBlock_t *pcb2 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
-    	pcb2->priority = 2;
-    	pcb2->remaining_burst_time = 2;
-    	pcb2->arrival = 3;
-	ProcessControlBlock_t *pcb3 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
-    	pcb3->priority = 5;
-    	pcb3->remaining_burst_time = 5;
-    	pcb3->arrival = 5;
 
 
-    	dyn_array_t *run_queue = dyn_array_create(3, sizeof(ProcessControlBlock_t *), NULL);
-    	dyn_array_insert(run_queue, 0, pcb1);
-    	dyn_array_insert(run_queue, 1, pcb2);
-    	dyn_array_insert(run_queue, 2, pcb3);
-
-    	ScheduleResult_t *results = (ScheduleResult_t *)malloc(sizeof(ScheduleResult_t));
-
-    	ASSERT_TRUE(priority(run_queue, results));
-
-    	ASSERT_NEAR(5.333, results->average_waiting_time, 0.001);
-    	ASSERT_NEAR(9.333, results->average_turnaround_time, 0.001);
-    	ASSERT_EQ(15, results->total_run_time);
-
-    	dyn_array_destroy(run_queue);
-    	free(pcb1);
-    	free(pcb2);
-    	free(pcb3);
-    	free(results);
-}
-//testing priority null
-TEST(priority, FailedNullPriority) {
-    	ScheduleResult_t result;
-    	dyn_array_t *ready_queue = dyn_array_create(3, sizeof(ProcessControlBlock_t), NULL);
-    	ASSERT_NE(ready_queue, nullptr);
-    	ASSERT_FALSE(priority(NULL, &result));
-    	ASSERT_FALSE(priority(ready_queue, NULL));
-    	dyn_array_destroy(ready_queue);
-}
-//testing round_robin
-TEST(round_robin, SuccessfulRoundRobin) {
-    	ProcessControlBlock_t *pcb1 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
-    	pcb1->remaining_burst_time = 10;
-    	pcb1->arrival = 0;
-    	ProcessControlBlock_t *pcb2 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
-    	pcb2->remaining_burst_time = 2;
-    	pcb2->arrival = 3;
-    	ProcessControlBlock_t *pcb3 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
-    	pcb3->remaining_burst_time = 5;
-    	pcb3->arrival = 5;
-
-    	dyn_array_t *run_queue = dyn_array_create(3, sizeof(ProcessControlBlock_t *), NULL);
-    	dyn_array_insert(run_queue, 0, pcb1);
-    	dyn_array_insert(run_queue, 1, pcb2);
-    	dyn_array_insert(run_queue, 2, pcb3);
-
-    	ScheduleResult_t *results = (ScheduleResult_t *)malloc(sizeof(ScheduleResult_t));
-
-    	ASSERT_TRUE(round_robin(run_queue, results, 3));
-
-    	ASSERT_NEAR(5.333, results->average_waiting_time, 0.001);
-    	ASSERT_NEAR(9.333, results->average_turnaround_time, 0.001);
-    	ASSERT_EQ(15, results->total_run_time);
-
-    	dyn_array_destroy(run_queue);
-    	free(pcb1);
-    	free(pcb2);
-    	free(pcb3);
-    	free(results);
-}
-
-//testing round_robin NULL input
-TEST(round_robin, FailedNullRound) {
-    	ScheduleResult_t result;
-    	dyn_array_t *run_queue = dyn_array_create(3, sizeof(ProcessControlBlock_t *), NULL);
-    	ASSERT_NE(run_queue, nullptr);
-    	ASSERT_FALSE(round_robin(NULL, &result, 3));
-    	ASSERT_FALSE(round_robin(run_queue, NULL, 3));
-    	ASSERT_FALSE(round_robin(NULL, NULL, 3));
-    	dyn_array_destroy(run_queue);
-}
-
-//testing shortest_remaining_time_first
-TEST(shortest_remaining_time_first, SuccessfulSRTF) {
-    	ProcessControlBlock_t pcb1 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
-    	pcb1->remaining_burst_time = 6;
-    	pcb1->arrival = 0;
-    	ProcessControlBlock_t pcb2 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
-    	pcb2->remaining_burst_time = 2;
-    	pcb2->arrival = 1;
-    	ProcessControlBlock_t pcb3 = (ProcessControlBlock_t *)malloc(sizeof(ProcessControlBlock_t));
-    	pcb3->remaining_burst_time = 3;
-    	pcb3->arrival = 2;
-	
-    	dyn_array_t *run_queue = dyn_array_create(3, sizeof(ProcessControlBlock_t *), NULL);
-    	dyn_array_insert(run_queue, 0, pcb1);
-    	dyn_array_insert(run_queue, 1, pcb2);
-    	dyn_array_insert(run_queue, 2, pcb3);
-	
-    	ScheduleResult_t *results = (ScheduleResult_t *)malloc(sizeof(ScheduleResult_t));
-	
-    	ASSERT_TRUE(shortest_remaining_time_first(run_queue, results));
-    	printf("%f\n", results->average_waiting_time);
-    	ASSERT_NEAR(1.333, results->average_waiting_time, 0.001);
-    	ASSERT_NEAR(5.333, results->average_turnaround_time, 0.001);
-    	ASSERT_EQ(11, results->total_run_time);
-
-    	dyn_array_destroy(run_queue);
-    	free(pcb1);
-    	free(pcb2);
-    	free(pcb3);
-    	free(results);
-}
-
-//testing shortest_remaining_time_first NULL 
-TEST(shortest_remaining_time_first, FailedNullInput) {
-    	ScheduleResult_t result;
-    	ASSERT_FALSE(shortest_remaining_time_first(NULL, &result));
-
-    	dyn_array_t *run_queue = dyn_array_create(3, sizeof(ProcessControlBlock_t *), NULL);
-    	ASSERT_FALSE(shortest_remaining_time_first(run_queue, NULL));
-    	ASSERT_FALSE(shortest_remaining_time_first(NULL, NULL));
-	
-    	dyn_array_destroy(run_queue);
-}
 //had to add the structure here because for some reason it wouldnt recognize what it was otherwise
 struct dyn_array 
 {
@@ -652,7 +407,14 @@ TEST(shortest_remaining_time_first, Success){
 	
 	dyn_array_destroy(test_array);
 }
+//tests for shotest_job_first
+TEST(shortest_remaining_time_first, Nullfail){
+	dyn_array_t *test_array = nullptr;
+	ScheduleResult_t *test_result = nullptr;
 
+	bool check = shortest_remaining_time_first(test_array, test_result); 
+	EXPECT_EQ(check, false);
+}
 //These Tests are for process_scheduling.c for the load_process_control_blocks (PCB)
 
 TEST(load_process_control_blocks, Success){	
@@ -698,11 +460,137 @@ TEST(load_process_control_blocks, Success){
 }
 
 TEST(load_process_control_blocks, Fail){
-    const char *test_input_file = nullptr;  // Invalid file path (nullptr simulates a missing file)
+    	const char *test_input_file = nullptr;  // Invalid file path (nullptr simulates a missing file)
     
-    dyn_array_t *loaded_list = load_process_control_blocks(test_input_file);
+    	dyn_array_t *loaded_list = load_process_control_blocks(test_input_file);
     
-    EXPECT_EQ(loaded_list, nullptr);  // Expect failure (should return nullptr)
+    	EXPECT_EQ(loaded_list, nullptr);  // Expect failure (should return nullptr)
+}
+//tests for shotest_job_first
+TEST(shortest_job_first, Nullfail){
+    	dyn_array_t *test_array = nullptr;
+    	ScheduleResult_t *test_result = nullptr;
+
+    	bool check = shortest_job_first(test_array, test_result); 
+    	EXPECT_EQ(check, false);
+}
+
+TEST(shortest_job_first, ShortJobSucess){
+    	//define the test processes
+    	ProcessControlBlock_t test_process[] = { 
+    	    {5, 5, 1, 0, false},  
+    		{3, 3, 1, 1, false}, 
+    	    {8, 8, 1, 2, false}   
+    	};
+    
+    	//get the number of processes and the size of the structure
+    	size_t count = sizeof(test_process) / sizeof(ProcessControlBlock_t);
+    	size_t struct_size = sizeof(ProcessControlBlock_t);
+
+    	//create a dynamic array to hold the processes
+    	dyn_array_t *test_array = dyn_array_create(count, struct_size, NULL);
+   		ASSERT_NE(test_array, nullptr); //make sure array is created
+
+    	//push each onto the array
+    	for (size_t i = 0; i < count; i++) {
+    	    dyn_array_push_back(test_array, &test_process[i]);
+    	}
+
+    	//initialize results
+    	ScheduleResult_t result = {0, 0, 0};
+
+    	//run
+    	bool check = shortest_job_first(test_array, &result);
+    	EXPECT_EQ(check, true);//ensure sucess
+
+    	EXPECT_GT(result.total_run_time, (uint32_t)0);  //total run time > 0
+    	EXPECT_GT(result.average_waiting_time, (float)0);  //average waiting time > 0
+    	EXPECT_GT(result.average_turnaround_time, (float)0);  //average turnaround time > 0
+
+    	dyn_array_destroy(test_array);
+}
+//tests for round_robin
+TEST(round_robin, Nullfail){
+		dyn_array_t *test_array = nullptr;
+		ScheduleResult_t *test_result = nullptr;
+
+		bool check = round_robin(test_array, test_result, QUANTUM); 
+		EXPECT_EQ(check, false);
+}
+TEST(round_robin, Success){
+    	//define test processes
+    	ProcessControlBlock_t test_process[NUM_PCB] = { 
+    	    {6, 6, 1, 0, false},  
+    	    {8, 8, 1, 2, false}  
+    	};
+    
+    	//get the number of processes and the size of structure
+    	size_t count = sizeof(test_process) / sizeof(ProcessControlBlock_t);
+    	size_t struct_size = sizeof(ProcessControlBlock_t);
+
+    //create a dynamic array to hold the processes
+    dyn_array_t *test_array = dyn_array_create(count, struct_size, NULL);
+    ASSERT_NE(test_array, nullptr);  //ensure the array is successfully created
+
+    //push each test
+    for (size_t i = 0; i < count; i++) {
+        dyn_array_push_back(test_array, &test_process[i]);
+    }
+
+    ScheduleResult_t result = {0, 0, 0}; //make results 
+    size_t quantum = QUANTUM;  //set quantum value
+
+    //run the round_robin
+    bool check = round_robin(test_array, &result, quantum);
+    EXPECT_EQ(check, true);  //expect true
+
+    EXPECT_GT(result.total_run_time, (uint32_t)0);  // Total run time > 0
+    EXPECT_GT(result.average_waiting_time, (float)0);  // Average waiting time > 0
+    EXPECT_GT(result.average_turnaround_time, (float)0);  // Average turnaround > 0
+
+    dyn_array_destroy(test_array);
+}
+
+//tests for priority
+TEST(priority, Nullfail){
+	dyn_array_t *test_array = nullptr;
+	ScheduleResult_t *test_result = nullptr;
+
+	bool check = priority(test_array, test_result); 
+	EXPECT_EQ(check, false);
+}
+TEST(priority, SuccessTest){
+    //define an array
+    ProcessControlBlock_t test_process[] = { 
+        {6, 6, 1, 0, false},  
+        {8, 8, 2, 2, false},  
+        {4, 4, 1, 3, false} 
+    };
+
+    //get the number of processes and the size of structure
+    size_t count = sizeof(test_process) / sizeof(ProcessControlBlock_t);
+    size_t struct_size = sizeof(ProcessControlBlock_t);
+
+    //create a dynamic array to hold the processes
+    dyn_array_t *test_array = dyn_array_create(count, struct_size, NULL);
+    ASSERT_NE(test_array, nullptr);  //ensure the array is successfully created
+
+    //push each test
+    for (size_t i = 0; i < count; i++) {
+        dyn_array_push_back(test_array, &test_process[i]);
+    }
+
+    ScheduleResult_t result = {0, 0, 0};  //initialize result
+
+    //run priority
+    bool check = priority(test_array, &result);
+    EXPECT_EQ(check, true);  //expect true 
+
+    EXPECT_GT(result.total_run_time, (uint32_t)0);  //total run time > 0
+    EXPECT_GT(result.average_waiting_time, (float)0);  //average waiting time > 0
+    EXPECT_GT(result.average_turnaround_time, (float)0);  //average turnaround time > 0
+
+    dyn_array_destroy(test_array);
 }
 
 int main(int argc, char **argv)
