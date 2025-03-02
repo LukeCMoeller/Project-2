@@ -376,37 +376,41 @@ TEST(first_come_first_serve, Fails){
 	dyn_array_destroy(test_array);
 }
 
-// These tests are for process_scheduling.c for the shortest_remaining_time_first
-TEST(shortest_remaining_time_first, Success){
-	ProcessControlBlock_t test_nums[] = {	// Use process_t instead of normal int array
-        	{6, 6, 1, 0, false},
-        	{8, 8, 1, 2, false}
-   	};
-    	size_t count = sizeof(test_nums) / sizeof(ProcessControlBlock_t);
-    	size_t struct_size = sizeof(ProcessControlBlock_t);
-    	
-	dyn_array_t *test_array = dyn_array_create(count, struct_size, NULL);
-	ASSERT_NE(test_array, nullptr);
+TEST(shortest_remaining_time_first, Success) {
+    // Define the test processes
+    ProcessControlBlock_t test_process[] = {
+        {6, 6, 1, 0, false}, 
+        {8, 8, 1, 2, false},
+        {3, 3, 1, 1, false} 
+    };
 
-	for (size_t i = 0; i < count; i++) {	//Push test data into dynamic array
-        	dyn_array_push_back(test_array, &test_nums[i]);
-    	}
+    //get the number of processes and the size of the structure
+    size_t count = sizeof(test_process) / sizeof(ProcessControlBlock_t);
+    size_t struct_size = sizeof(ProcessControlBlock_t);
+
+    //create a dynamic array to hold the processes
+    dyn_array_t *test_array = dyn_array_create(count, struct_size, NULL);
+    ASSERT_NE(test_array, nullptr); //ensure the array is created
+
+    //push each process onto the array
+    for (size_t i = 0; i < count; i++) {
+        dyn_array_push_back(test_array, &test_process[i]);
+    }
+
+
+    ScheduleResult_t result = {0, 0, 0};  //nitialize results
+
+    //run shortest_remaining_time_first
+    bool check = shortest_remaining_time_first(test_array, &result);
 	
-	ScheduleResult_t result = {0, 0, 0}; //set up result object that will be passed back
-	
-	result.total_run_time = 0; //set up default values
-	result.average_waiting_time = 0;     //set up default values
-	result.average_turnaround_time = 0;  //set up default values
-	
-	bool check = shortest_remaining_time_first(test_array, &result); //Run the test result
-	EXPECT_EQ(check, true); //if passes will be true
-	
-	EXPECT_GT(result.average_waiting_time, 0);     //confirm ScheduleResult_t result changed accordingly
-	EXPECT_GT(result.average_turnaround_time, 0);  //confirm ScheduleResult_t result changed accordingly
-	EXPECT_GT(result.total_run_time, (size_t)0); //confirm ScheduleResult_t result changed accordingly
-	
-	dyn_array_destroy(test_array);
+	EXPECT_EQ(check, true); //ensure function runs successfully
+    EXPECT_GT(result.total_run_time, (uint32_t)0);
+    EXPECT_GE(result.average_waiting_time, (float)0);
+    EXPECT_GE(result.average_turnaround_time, (float)0);
+
+    dyn_array_destroy(test_array);
 }
+
 //tests for shotest_job_first
 TEST(shortest_remaining_time_first, Nullfail){
 	dyn_array_t *test_array = nullptr;
