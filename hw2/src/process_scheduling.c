@@ -505,11 +505,16 @@ bool shortest_remaining_time_first(dyn_array_t *ready_queue, ScheduleResult_t *r
 			break; //We have no elements in the list and we should leave
 		}
 
-		//WE can sort here, but it more than likly won't have any changes or differences
-		if (dyn_array_sort(ready_queue, compare_remaining_time) == false) {
-			return false;
-		}
 		x++;
+		//if all jobs are completed then we don't need to sort the list anymore because it will be empty
+		if(x != num_jobs){
+			//WE can sort here, but it more than likly won't have any changes or differences
+			if (dyn_array_sort(ready_queue, compare_remaining_time) == false) {
+				return false;
+			}
+		}
+		
+		
 	}
 
 	//average the totals for both turnaround_time and waiting times
